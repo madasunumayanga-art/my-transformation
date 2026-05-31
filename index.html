@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no"/>
+<meta name="theme-color" content="#4FC3A1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Transform"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
+<title>My Transformation Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0b0b0b;--surface:#141414;--surface2:#1a1a1a;--border:#222;
+  --green:#4FC3A1;--gold:#E8C547;--blue:#7B9CDE;--orange:#E87D5A;--purple:#B77FD4;
+  --text:#e8e8e8;--muted:#888;--dim:#444;
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text)}
+#app{height:100vh;display:flex;flex-direction:column;max-width:480px;margin:0 auto;position:relative;overflow:hidden}
+
+/* ── Header ── */
+#header{
+  background:linear-gradient(160deg,#0f1f14 0%,#0b0b0b 100%);
+  padding:env(safe-area-inset-top,16px) 18px 14px;
+  padding-top:max(env(safe-area-inset-top),16px);
+  border-bottom:1px solid #1c1c1c;flex-shrink:0;
+}
+.h-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px}
+.h-greeting{font-size:12px;color:var(--muted);margin-bottom:2px}
+.h-title{font-family:'Playfair Display',serif;font-size:21px;color:#fff;letter-spacing:-0.3px}
+.streak-box{
+  display:flex;flex-direction:column;align-items:center;
+  background:#110f00;border:1px solid #E8C54740;border-radius:12px;padding:8px 14px;
+}
+.streak-fire{font-size:17px}
+.streak-num{font-size:21px;font-weight:900;color:var(--gold);line-height:1.1}
+.streak-lbl{font-size:9px;color:var(--muted);margin-top:1px}
+.progress-bar{height:5px;background:#1e1e1e;border-radius:3px;overflow:hidden;margin-bottom:5px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--green),var(--gold));border-radius:3px;transition:width .5s ease}
+.progress-row{display:flex;justify-content:space-between;margin-bottom:10px}
+.progress-lbl{font-size:10px;color:var(--dim)}
+.progress-pct{font-size:10px;color:var(--green);font-weight:700}
+.quote-box{background:#111;border-left:3px solid var(--green);padding:8px 12px;border-radius:0 8px 8px 0}
+.quote-text{font-size:11px;color:#999;font-style:italic;line-height:1.55}
+
+/* ── Tabs ── */
+#tabs{
+  display:flex;background:#0f0f0f;border-bottom:1px solid #1a1a1a;
+  flex-shrink:0;position:relative;
+}
+.tab{
+  flex:1;padding:10px 4px 8px;border:none;background:none;color:#444;
+  font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;transition:color .2s;
+}
+.tab.active{color:var(--green);border-bottom:2px solid var(--green);font-weight:700}
+.tab-indicator{
+  position:absolute;bottom:0;height:2px;background:var(--green);
+  transition:left .25s ease,width .25s ease;
+}
+
+/* ── Main scroll ── */
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:14px 13px 90px}
+#main::-webkit-scrollbar{display:none}
+
+/* ── Cards ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 12px;margin-bottom:11px}
+.card-header{display:flex;align-items:center;gap:9px;margin-bottom:11px}
+.card-icon{width:31px;height:31px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.card-title{flex:1;font-size:14px;font-weight:700;color:#ddd}
+.card-badge{font-size:11px;font-weight:700;color:#0b0b0b;padding:3px 9px;border-radius:20px}
+
+/* ── Habits ── */
+.habit-btn{
+  width:100%;background:var(--surface2);border:1px solid #1f1f1f;
+  border-radius:10px;padding:11px 11px;margin-bottom:7px;
+  cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:11px;
+  -webkit-appearance:none;
+}
+.habit-btn:active{transform:scale(0.98);opacity:.85}
+.habit-btn.done{background:#0c1610;border-color:#4FC3A122;opacity:.7}
+.habit-btn.done .habit-label{text-decoration:line-through;color:#555}
+.checkbox{
+  width:23px;height:23px;border-radius:7px;border:2px solid #2a2a2a;
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.checkbox.checked{background:var(--green);border-color:var(--green)}
+.check-svg{display:none}
+.checkbox.checked .check-svg{display:block}
+.habit-info{flex:1;min-width:0}
+.habit-label{font-size:13px;color:#ccc;line-height:1.3;font-family:'DM Sans',sans-serif}
+.habit-time{font-size:10px;color:#555;margin-top:2px}
+
+/* ── Pills ── */
+.pill-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:9px;scrollbar-width:none;margin-bottom:3px}
+.pill-row::-webkit-scrollbar{display:none}
+.pill{
+  flex-shrink:0;padding:5px 12px;border-radius:20px;border:1px solid var(--border);
+  background:var(--surface);color:var(--muted);font-size:11px;cursor:pointer;
+  white-space:nowrap;font-family:'DM Sans',sans-serif;transition:all .15s;
+}
+.pill.active{background:var(--green);color:#0b0b0b;border-color:var(--green);font-weight:700}
+
+/* ── Stats ── */
+.stats-row{display:flex;gap:8px;margin-bottom:13px}
+.stat-box{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
+.stat-num{font-size:22px;font-weight:800;color:var(--text)}
+.stat-lbl{font-size:10px;color:var(--dim);margin-top:2px}
+
+/* ── Mini bar ── */
+.mini-bar{height:5px;background:#1c1c1c;border-radius:3px;overflow:hidden;margin-top:4px}
+.mini-fill{height:100%;border-radius:3px;transition:width .5s ease}
+
+/* ── Milestones ── */
+.milestone-btn{
+  width:100%;background:var(--surface2);border:1px solid #1f1f1f;
+  border-radius:10px;padding:11px 11px;margin-bottom:7px;
+  cursor:pointer;text-align:left;transition:all .15s;display:flex;align-items:center;gap:11px;
+  -webkit-appearance:none;
+}
+.milestone-btn:active{transform:scale(0.98)}
+.milestone-btn.done{background:#10101a;border-color:#B77FD422;opacity:.75}
+.milestone-btn.done .milestone-label{text-decoration:line-through;color:#555}
+.milestone-label{font-size:13px;color:#ccc;line-height:1.35;font-family:'DM Sans',sans-serif}
+
+/* ── Section heading ── */
+.sec-heading{font-family:'Playfair Display',serif;font-size:16px;color:#ddd;margin-bottom:13px}
+
+/* ── Motivational card ── */
+.motiv-card{
+  background:linear-gradient(135deg,#0f1f14,#0b0b0b);
+  border:1px solid #4FC3A130;border-radius:14px;padding:18px 16px;margin-bottom:11px;
+  text-align:center;
+}
+.motiv-emoji{font-size:28px;margin-bottom:7px}
+.motiv-title{color:var(--green);font-size:15px;font-weight:700;margin-bottom:6px;font-family:'Playfair Display',serif}
+.motiv-text{color:#888;font-size:12px;line-height:1.6}
+
+/* ── Big stats ── */
+.big-stat-grid{display:flex;gap:8px;margin-bottom:13px}
+.big-stat{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 6px;text-align:center}
+.big-stat-emoji{font-size:21px;margin-bottom:3px}
+.big-stat-num{font-size:24px;font-weight:900;color:var(--gold);font-family:'Playfair Display',serif}
+.big-stat-lbl{font-size:9px;color:var(--dim);margin-top:2px}
+
+/* ── Notification banner ── */
+#notif-banner{
+  position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-100%);
+  max-width:460px;width:calc(100% - 24px);
+  padding:12px 18px;border-radius:0 0 16px 16px;
+  font-size:13px;font-weight:700;z-index:9999;
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  text-align:center;box-shadow:0 8px 32px rgba(0,0,0,.5);
+  font-family:'DM Sans',sans-serif;
+}
+#notif-banner.show{transform:translateX(-50%) translateY(0)}
+#notif-banner.success{background:var(--green);color:#0b0b0b}
+#notif-banner.fire{background:var(--gold);color:#0b0b0b}
+#notif-banner.milestone{background:var(--purple);color:#fff}
+#notif-banner.info{background:#1e2e2e;color:var(--green);border:1px solid var(--green)}
+
+/* ── Install prompt ── */
+#install-bar{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  max-width:480px;width:100%;background:#111;
+  border-top:1px solid #2a2a2a;padding:12px 16px 20px;
+  display:none;z-index:500;
+}
+#install-bar.show{display:flex;align-items:center;gap:12px}
+.install-text{flex:1;font-size:12px;color:#aaa;line-height:1.4}
+.install-text b{color:#fff;display:block;margin-bottom:2px}
+.install-btn{
+  background:var(--green);color:#0b0b0b;border:none;border-radius:10px;
+  padding:9px 16px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;
+  font-family:'DM Sans',sans-serif;
+}
+.install-close{background:none;border:none;color:#555;font-size:18px;cursor:pointer;padding:4px}
+
+/* ── Notif permission card ── */
+#notif-card{
+  background:#131a14;border:1px solid #4FC3A133;border-radius:14px;
+  padding:16px;margin-bottom:11px;display:none;
+}
+#notif-card.show{display:block}
+.notif-card-title{color:var(--green);font-weight:700;font-size:14px;margin-bottom:6px}
+.notif-card-text{color:#888;font-size:12px;line-height:1.55;margin-bottom:12px}
+.notif-card-btn{
+  background:var(--green);color:#0b0b0b;border:none;border-radius:10px;
+  padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;width:100%;
+  font-family:'DM Sans',sans-serif;
+}
+
+/* ── Reminder settings ── */
+#reminder-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px 12px;margin-bottom:11px}
+.toggle-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.toggle-lbl{font-size:13px;color:#ddd}
+.toggle{position:relative;width:44px;height:24px}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:#2a2a2a;border-radius:24px;transition:.3s;cursor:pointer;
+}
+.toggle-slider:before{
+  content:'';position:absolute;width:18px;height:18px;
+  background:#555;border-radius:50%;top:3px;left:3px;transition:.3s;
+}
+input:checked + .toggle-slider{background:var(--green)}
+input:checked + .toggle-slider:before{background:#0b0b0b;transform:translateX(20px)}
+.interval-select{
+  background:var(--surface2);border:1px solid var(--border);color:var(--text);
+  border-radius:8px;padding:6px 10px;font-size:12px;font-family:'DM Sans',sans-serif;
+  width:100%;margin-top:8px;
+}
+
+/* ── Animations ── */
+@keyframes checkPop{0%{transform:scale(0.5)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+.checkbox.checked{animation:checkPop .25s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.card{animation:fadeIn .3s ease both}
+
+/* ── Bottom padding for iOS ── */
+#main{padding-bottom:calc(80px + env(safe-area-inset-bottom,0px))}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- Notification banner -->
+  <div id="notif-banner"></div>
+
+  <!-- Header -->
+  <div id="header">
+    <div class="h-top">
+      <div>
+        <div class="h-greeting" id="greeting">Good morning 👋</div>
+        <div class="h-title">My Transformation</div>
+      </div>
+      <div class="streak-box">
+        <div class="streak-fire">🔥</div>
+        <div class="streak-num" id="streak-num">0</div>
+        <div class="streak-lbl">day streak</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="main-progress" style="width:0%"></div></div>
+    <div class="progress-row">
+      <div class="progress-lbl" id="progress-lbl">Today: 0/20 habits</div>
+      <div class="progress-pct" id="progress-pct">0%</div>
+    </div>
+    <div class="quote-box"><div class="quote-text" id="quote-text"></div></div>
+  </div>
+
+  <!-- Tabs -->
+  <div id="tabs">
+    <button class="tab active" data-tab="today" onclick="switchTab('today')">📋<span>Today</span></button>
+    <button class="tab" data-tab="weekly" onclick="switchTab('weekly')">📅<span>Weekly</span></button>
+    <button class="tab" data-tab="milestones" onclick="switchTab('milestones')">🏆<span>Milestones</span></button>
+    <button class="tab" data-tab="progress" onclick="switchTab('progress')">📊<span>Progress</span></button>
+    <button class="tab" data-tab="settings" onclick="switchTab('settings')">⚙️<span>Reminders</span></button>
+  </div>
+
+  <!-- Main content -->
+  <div id="main"></div>
+
+  <!-- Install bar -->
+  <div id="install-bar">
+    <img src="icons/icon-192.png" width="40" height="40" style="border-radius:10px;flex-shrink:0" onerror="this.style.display='none'"/>
+    <div class="install-text">
+      <b>Add to Home Screen</b>
+      Get hourly reminders & access like a native app
+    </div>
+    <button class="install-btn" onclick="doInstall()">Install</button>
+    <button class="install-close" onclick="document.getElementById('install-bar').classList.remove('show')">✕</button>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════════
+// DATA
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const SECTIONS = [
+  {id:'hygiene',  label:'Hygiene',    icon:'🪥', color:'#4FC3A1'},
+  {id:'marriage', label:'Marriage',   icon:'💛', color:'#E8C547'},
+  {id:'father',   label:'Fatherhood', icon:'👶', color:'#7B9CDE'},
+  {id:'household',label:'Household',  icon:'🏠', color:'#E87D5A'},
+  {id:'social',   label:'Social',     icon:'⏱', color:'#4FC3A1'},
+  {id:'finance',  label:'Finance',    icon:'💰', color:'#B77FD4'},
+];
+
+const DAILY_HABITS = [
+  {id:'h1', section:'hygiene',   label:'Morning shower',           time:'06:05', emoji:'🚿'},
+  {id:'h2', section:'hygiene',   label:'Brush teeth 2 min',        time:'06:05', emoji:'🪥'},
+  {id:'h3', section:'hygiene',   label:'Deodorant applied',        time:'06:20', emoji:'✅'},
+  {id:'h4', section:'hygiene',   label:'Clean ironed clothes on',  time:'06:25', emoji:'👕'},
+  {id:'m1', section:'marriage',  label:'Genuine morning greeting', time:'06:45', emoji:'🌅'},
+  {id:'m2', section:'marriage',  label:'6-second hug/kiss goodbye',time:'07:00', emoji:'🤗'},
+  {id:'m3', section:'marriage',  label:'Warm mid-day message sent',time:'12:30', emoji:'💬'},
+  {id:'m4', section:'marriage',  label:'Greeted wife first at home',time:'18:00',emoji:'🏡'},
+  {id:'m5', section:'marriage',  label:'15 min no-phone talk',     time:'20:30', emoji:'💛'},
+  {id:'f1', section:'father',    label:'5 min with child (morning)',time:'06:00',emoji:'🌞'},
+  {id:'f2', section:'father',    label:'Own baby bath/feed/play',  time:'18:00', emoji:'🛁'},
+  {id:'f3', section:'father',    label:'Phone in other room – baby time',time:'18:00',emoji:'📵'},
+  {id:'f4', section:'father',    label:'Bedtime routine with child',time:'20:00',emoji:'🌙'},
+  {id:'ho1',section:'household', label:'Morning household scan',   time:'06:55', emoji:'👀'},
+  {id:'ho2',section:'household', label:'See it – do it (5 min rule)',time:'19:00',emoji:'⚡'},
+  {id:'ho3',section:'household', label:'Evening household scan',   time:'21:30', emoji:'🔍'},
+  {id:'ho4',section:'household', label:'Lay out tomorrow\'s clothes',time:'21:45',emoji:'👔'},
+  {id:'s1', section:'social',    label:'Phone away 18:30–20:30',   time:'18:30', emoji:'📵'},
+  {id:'s2', section:'social',    label:'Phone charging outside bedroom',time:'21:30',emoji:'🔌'},
+  {id:'fi1',section:'finance',   label:'Read commitment statement',time:'06:00', emoji:'📖'},
+];
+
+const WEEKLY_HABITS = [
+  {id:'w1', section:'hygiene',   label:'Trim nails',               day:0, emoji:'✂️'},
+  {id:'w2', section:'hygiene',   label:'Wash pillow cover',        day:0, emoji:'🛏'},
+  {id:'w3', section:'marriage',  label:'One "date moment" this week',day:6,emoji:'❤️'},
+  {id:'w4', section:'marriage',  label:'One specific compliment given',day:5,emoji:'💬'},
+  {id:'w5', section:'father',    label:'Solo dad grocery run (take baby)',day:6,emoji:'🛒'},
+  {id:'w6', section:'father',    label:'Family outing / park trip', day:0, emoji:'🌳'},
+  {id:'w7', section:'household', label:'Ask wife: One thing I can handle?',day:1,emoji:'🙋'},
+  {id:'w8', section:'household', label:'Car wash',                  day:0, emoji:'🚗'},
+  {id:'w9', section:'finance',   label:'PMP study block (1-2 hrs)', day:0, emoji:'📚'},
+];
+
+const PHASES = [
+  {id:1,label:'Foundation', months:'Month 1–2', color:'#E8C547', emoji:'🌱'},
+  {id:2,label:'Momentum',   months:'Month 3–4', color:'#4FC3A1', emoji:'💪'},
+  {id:3,label:'Integration',months:'Month 5–6', color:'#7B9CDE', emoji:'⚙️'},
+  {id:4,label:'Depth',      months:'Month 7–9', color:'#E87D5A', emoji:'🔥'},
+  {id:5,label:'Legacy',     months:'Month 10–12',color:'#B77FD4',emoji:'🏆'},
+];
+
+const MILESTONES = [
+  {id:'ml1', phase:1, label:'Daily hygiene 30 days — no reminders needed'},
+  {id:'ml2', phase:1, label:'Had the repair conversation with wife'},
+  {id:'ml3', phase:1, label:'Know exact monthly income & expenses'},
+  {id:'ml4', phase:1, label:'Own baby evening routine daily'},
+  {id:'ml5', phase:1, label:'Socialising reduced to 2-1-1 rule'},
+  {id:'ml6', phase:1, label:'See-it-do-it rule applied daily'},
+  {id:'ml7', phase:2, label:'Wife named 2–3 changes she noticed'},
+  {id:'ml8', phase:2, label:'First monthly marriage check-in done'},
+  {id:'ml9', phase:2, label:'PMP study plan active with weekly hours'},
+  {id:'ml10',phase:2, label:'Owned tasks running without reminders'},
+  {id:'ml11',phase:2, label:'Emergency fund started'},
+  {id:'ml12',phase:3, label:'New habits feel natural, not effortful'},
+  {id:'ml13',phase:3, label:'Emotional intimacy visibly improved'},
+  {id:'ml14',phase:3, label:'Clear financial picture + savings target set'},
+  {id:'ml15',phase:3, label:'Career development action taken'},
+  {id:'ml16',phase:4, label:'Monthly check-ins happening consistently'},
+  {id:'ml17',phase:4, label:'Plan fully internalised – no document needed'},
+  {id:'ml18',phase:4, label:'Child seeks you out daily (visible bond)'},
+  {id:'ml19',phase:4, label:'PMP exam completed or booked'},
+  {id:'ml20',phase:4, label:'Home ownership research started'},
+  {id:'ml21',phase:5, label:'Became the husband & father you intended'},
+  {id:'ml22',phase:5, label:"Wife's frustrations became gratitude"},
+  {id:'ml23',phase:5, label:'3-year family vision written together'},
+  {id:'ml24',phase:5, label:'Child has a father who always shows up'},
+  {id:'ml25',phase:5, label:'Proud of who you have become'},
+];
+
+const QUOTES = [
+  "Your child won't remember what you bought. They'll remember if you showed up.",
+  "Small daily actions outperform grand occasional gestures — every time.",
+  "She listed those frustrations because she still believes in you.",
+  "Initiative means seeing what needs to be done before someone tells you.",
+  "The best gift you can give your child is a father who is a great husband.",
+  "Structure isn't a prison — it's the scaffolding holding your intentions upright.",
+  "You are not starting from zero. You are starting from love.",
+  "Start tomorrow. Not Monday. Tomorrow.",
+  "Every checkbox you tick is a promise kept.",
+];
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let state = {
+  dailyDone: {},
+  weeklyDone: {},
+  milestones: {},
+  streak: 0,
+  lastStreakDate: '',
+  remindersEnabled: false,
+  reminderInterval: 60, // minutes
+  notifPermission: 'default',
+  currentTab: 'today',
+  activeSection: 'all',
+};
+
+function todayKey()  { return new Date().toISOString().slice(0,10); }
+function weekKey()   {
+  const d=new Date(), day=d.getDay(), diff=d.getDate()-day;
+  return new Date(d.setDate(diff)).toISOString().slice(0,10);
+}
+
+function saveState() {
+  const toSave = {
+    [`daily_${todayKey()}`]: state.dailyDone,
+    [`weekly_${weekKey()}`]: state.weeklyDone,
+    milestones: state.milestones,
+    streak: state.streak,
+    lastStreakDate: state.lastStreakDate,
+    remindersEnabled: state.remindersEnabled,
+    reminderInterval: state.reminderInterval,
+  };
+  try { localStorage.setItem('transform_state', JSON.stringify(toSave)); } catch(e){}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('transform_state');
+    if (!raw) return;
+    const s = JSON.parse(raw);
+    state.dailyDone       = s[`daily_${todayKey()}`]  || {};
+    state.weeklyDone      = s[`weekly_${weekKey()}`]   || {};
+    state.milestones      = s.milestones               || {};
+    state.streak          = s.streak                   || 0;
+    state.lastStreakDate   = s.lastStreakDate            || '';
+    state.remindersEnabled = s.remindersEnabled         || false;
+    state.reminderInterval = s.reminderInterval         || 60;
+  } catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// NOTIFICATIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let reminderTimer = null;
+
+async function requestNotifPermission() {
+  if (!('Notification' in window)) {
+    showBanner('Notifications not supported on this browser', 'info'); return;
+  }
+  const perm = await Notification.requestPermission();
+  state.notifPermission = perm;
+  if (perm === 'granted') {
+    showBanner('🔔 Notifications enabled!', 'success');
+    if (state.remindersEnabled) startReminders();
+    renderSettings();
+  } else {
+    showBanner('Notifications blocked — please enable in browser settings', 'info');
+  }
+}
+
+function getPendingHabits() {
+  return DAILY_HABITS.filter(h => !state.dailyDone[h.id]);
+}
+
+function startReminders() {
+  if (reminderTimer) clearInterval(reminderTimer);
+  if (!state.remindersEnabled) return;
+  if (Notification.permission !== 'granted') return;
+
+  const ms = state.reminderInterval * 60 * 1000;
+  reminderTimer = setInterval(() => {
+    const pending = getPendingHabits();
+    if (pending.length === 0) return;
+    sendReminder(pending);
+  }, ms);
+
+  // Also send one immediately if there are pending tasks
+  setTimeout(() => {
+    const pending = getPendingHabits();
+    if (pending.length > 0) sendReminder(pending);
+  }, 3000);
+}
+
+function stopReminders() {
+  if (reminderTimer) { clearInterval(reminderTimer); reminderTimer = null; }
+}
+
+function sendReminder(pending) {
+  // Try service worker first (shows action buttons)
+  if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+    navigator.serviceWorker.controller.postMessage({
+      type: 'SCHEDULE_CHECK',
+      pending: pending.map(h => ({id:h.id, label:h.label, emoji:h.emoji}))
+    });
+  } else {
+    // Fallback: direct Notification API
+    const body = `${pending.length} task${pending.length>1?'s':''} pending: ` +
+      pending.slice(0,3).map(h=>`${h.emoji} ${h.label}`).join(', ') +
+      (pending.length>3 ? ` +${pending.length-3} more` : '');
+    try {
+      new Notification('⏰ Pending Habits', {
+        body, icon: 'icons/icon-192.png', tag: 'hourly-reminder', renotify: true,
+      });
+    } catch(e){}
+  }
+}
+
+// Listen for SW messages (mark done from notification)
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'MARK_DONE') {
+      toggleDaily(e.data.habitId, true);
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function toggleDaily(id, skipRender=false) {
+  const wasDone = !!state.dailyDone[id];
+  state.dailyDone[id] = !wasDone;
+  saveState();
+  checkStreak();
+  if (!wasDone) {
+    const h = DAILY_HABITS.find(x=>x.id===id);
+    showBanner(`✓ ${h.emoji} ${h.label}`, 'success');
+    const allDone = DAILY_HABITS.every(h=>state.dailyDone[h.id]);
+    if (allDone) setTimeout(()=>showBanner('🔥 All habits complete! Amazing!','fire'),500);
+  }
+  updateHeader();
+  if (!skipRender) {
+    // Just update the specific button
+    const btn = document.getElementById(`habit_${id}`);
+    if (btn) refreshHabitBtn(btn, id, 'daily');
+  }
+}
+
+function toggleWeekly(id) {
+  state.weeklyDone[id] = !state.weeklyDone[id];
+  saveState();
+  if (state.weeklyDone[id]) {
+    const h = WEEKLY_HABITS.find(x=>x.id===id);
+    showBanner(`✓ ${h.emoji} ${h.label}`, 'success');
+  }
+  const btn = document.getElementById(`habit_${id}`);
+  if (btn) refreshHabitBtn(btn, id, 'weekly');
+  updateWeeklyStats();
+}
+
+function toggleMilestone(id) {
+  state.milestones[id] = !state.milestones[id];
+  saveState();
+  if (state.milestones[id]) {
+    const m = MILESTONES.find(x=>x.id===id);
+    showBanner(`🏆 Milestone: ${m.label}`, 'milestone');
+  }
+  const btn = document.getElementById(`ml_${id}`);
+  if (btn) refreshMilestoneBtn(btn, id);
+  updateMilestoneStats();
+}
+
+function refreshHabitBtn(btn, id, type) {
+  const done = type==='daily' ? !!state.dailyDone[id] : !!state.weeklyDone[id];
+  const cb = btn.querySelector('.checkbox');
+  const lbl = btn.querySelector('.habit-label');
+  if (done) {
+    btn.classList.add('done'); cb.classList.add('checked');
+    cb.innerHTML = checkSVG(); lbl.style.textDecoration='line-through'; lbl.style.color='#555';
+  } else {
+    btn.classList.remove('done'); cb.classList.remove('checked');
+    cb.innerHTML = ''; lbl.style.textDecoration='none'; lbl.style.color='#ccc';
+  }
+}
+
+function refreshMilestoneBtn(btn, id) {
+  const done = !!state.milestones[id];
+  const ph = PHASES.find(p => MILESTONES.find(m=>m.id===id)?.phase === p.id);
+  const cb = btn.querySelector('.checkbox');
+  const lbl = btn.querySelector('.milestone-label');
+  if (done) {
+    btn.classList.add('done'); cb.classList.add('checked');
+    cb.style.background = ph?.color||'#4FC3A1';
+    cb.style.borderColor = ph?.color||'#4FC3A1';
+    cb.innerHTML = checkSVG();
+    lbl.style.textDecoration='line-through'; lbl.style.color='#555';
+  } else {
+    btn.classList.remove('done'); cb.classList.remove('checked');
+    cb.style.background=''; cb.style.borderColor='';
+    cb.innerHTML = ''; lbl.style.textDecoration='none'; lbl.style.color='#ccc';
+  }
+}
+
+function checkStreak() {
+  const today = todayKey();
+  if (state.lastStreakDate === today) return;
+  const allDone = DAILY_HABITS.every(h=>state.dailyDone[h.id]);
+  if (allDone) {
+    state.streak++;
+    state.lastStreakDate = today;
+    saveState();
+    document.getElementById('streak-num').textContent = state.streak;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RENDER HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function checkSVG() {
+  return `<svg class="check-svg" width="13" height="13" viewBox="0 0 13 13" fill="none">
+    <polyline points="2,6.5 5.5,10 11,3.5" stroke="#0b0b0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+function habitBtnHTML(h, done, onclick, type='daily') {
+  return `<button id="habit_${h.id}" class="habit-btn${done?' done':''}" onclick="${onclick}('${h.id}')">
+    <div class="checkbox${done?' checked':''}">${done?checkSVG():''}</div>
+    <div class="habit-info">
+      <div class="habit-label" style="${done?'text-decoration:line-through;color:#555':''}">${h.emoji} ${h.label}</div>
+      <div class="habit-time">${type==='daily'?'⏰ '+h.time:'📅 '+['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][h.day]}</div>
+    </div>
+  </button>`;
+}
+
+function milestoneBtnHTML(m, done, phaseColor) {
+  return `<button id="ml_${m.id}" class="milestone-btn${done?' done':''}" onclick="toggleMilestone('${m.id}')">
+    <div class="checkbox${done?' checked':''}" style="${done?`background:${phaseColor};border-color:${phaseColor}`:''}">
+      ${done?checkSVG():''}
+    </div>
+    <div class="milestone-label" style="${done?'text-decoration:line-through;color:#555':''}">${m.label}</div>
+  </button>`;
+}
+
+function miniBarHTML(pct, color) {
+  return `<div class="mini-bar"><div class="mini-fill" style="width:${pct}%;background:${color}"></div></div>`;
+}
+
+function updateHeader() {
+  const done  = DAILY_HABITS.filter(h=>state.dailyDone[h.id]).length;
+  const total = DAILY_HABITS.length;
+  const pct   = Math.round(done/total*100);
+  document.getElementById('main-progress').style.width = pct+'%';
+  document.getElementById('progress-lbl').textContent = `Today: ${done}/${total} habits`;
+  document.getElementById('progress-pct').textContent = pct+'%';
+  document.getElementById('streak-num').textContent = state.streak;
+}
+
+function updateWeeklyStats() {
+  const d = document.getElementById('w-done');
+  const r = document.getElementById('w-remaining');
+  const p = document.getElementById('w-pct');
+  if (!d) return;
+  const done = WEEKLY_HABITS.filter(h=>state.weeklyDone[h.id]).length;
+  d.textContent = done;
+  r.textContent = WEEKLY_HABITS.length - done;
+  p.textContent = Math.round(done/WEEKLY_HABITS.length*100)+'%';
+}
+
+function updateMilestoneStats() {
+  const d = document.getElementById('ml-done');
+  const r = document.getElementById('ml-remaining');
+  const p = document.getElementById('ml-pct');
+  if (!d) return;
+  const done = MILESTONES.filter(m=>state.milestones[m.id]).length;
+  d.textContent = done;
+  r.textContent = MILESTONES.length - done;
+  p.textContent = Math.round(done/MILESTONES.length*100)+'%';
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function switchTab(tab) {
+  state.currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tab);
+  });
+  renderMain();
+}
+
+function renderMain() {
+  const el = document.getElementById('main');
+  switch(state.currentTab) {
+    case 'today':      el.innerHTML = renderToday();      break;
+    case 'weekly':     el.innerHTML = renderWeekly();     break;
+    case 'milestones': el.innerHTML = renderMilestones(); break;
+    case 'progress':   el.innerHTML = renderProgress();   break;
+    case 'settings':   el.innerHTML = renderSettings();   break;
+  }
+}
+
+// ── TODAY ────────────────────────────────────────────────────────────────────
+
+function renderToday() {
+  const todayWeekly = WEEKLY_HABITS.filter(h=>h.day===new Date().getDay());
+  const sec = state.activeSection;
+
+  let pills = `<div class="pill-row">
+    <button class="pill${sec==='all'?' active':''}" onclick="setSec('all')">All</button>`;
+  SECTIONS.forEach(s => {
+    pills += `<button class="pill${sec===s.id?' active':''}" 
+      onclick="setSec('${s.id}')" style="${sec===s.id?`background:${s.color};color:#0b0b0b;border-color:${s.color};font-weight:700`:''}">
+      ${s.icon} ${s.label}</button>`;
+  });
+  pills += '</div>';
+
+  let html = pills;
+
+  const sectionsToShow = sec==='all' ? SECTIONS : SECTIONS.filter(s=>s.id===sec);
+  sectionsToShow.forEach(section => {
+    const habits = DAILY_HABITS.filter(h=>h.section===section.id);
+    if (!habits.length) return;
+    const done = habits.filter(h=>state.dailyDone[h.id]).length;
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:${section.color}22;color:${section.color}">${section.icon}</div>
+        <div class="card-title">${section.label}</div>
+        <div class="card-badge" style="background:${section.color}">${done}/${habits.length}</div>
+      </div>`;
+    habits.forEach(h => {
+      html += habitBtnHTML(h, !!state.dailyDone[h.id], 'toggleDaily', 'daily');
+    });
+    html += '</div>';
+  });
+
+  if (todayWeekly.length > 0 && (sec==='all')) {
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:#E8C54722;color:#E8C547">📅</div>
+        <div class="card-title">Also Due Today</div>
+      </div>`;
+    todayWeekly.forEach(h => {
+      html += habitBtnHTML(h, !!state.weeklyDone[h.id], 'toggleWeekly', 'weekly');
+    });
+    html += '</div>';
+  }
+
+  return html;
+}
+
+function setSec(id) {
+  state.activeSection = id;
+  renderMain();
+}
+
+// ── WEEKLY ───────────────────────────────────────────────────────────────────
+
+function renderWeekly() {
+  const done = WEEKLY_HABITS.filter(h=>state.weeklyDone[h.id]).length;
+  const pct  = Math.round(done/WEEKLY_HABITS.length*100);
+
+  let html = `<div class="sec-heading">This Week's Tasks</div>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="w-done">${done}</div><div class="stat-lbl">Done</div></div>
+    <div class="stat-box"><div class="stat-num" id="w-remaining">${WEEKLY_HABITS.length-done}</div><div class="stat-lbl">Remaining</div></div>
+    <div class="stat-box" style="background:#4FC3A122"><div class="stat-num" id="w-pct" style="color:#4FC3A1">${pct}%</div><div class="stat-lbl">Complete</div></div>
+  </div>`;
+
+  SECTIONS.forEach(sec => {
+    const habits = WEEKLY_HABITS.filter(h=>h.section===sec.id);
+    if (!habits.length) return;
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:${sec.color}22;color:${sec.color}">${sec.icon}</div>
+        <div class="card-title">${sec.label}</div>
+      </div>`;
+    habits.forEach(h => {
+      html += habitBtnHTML(h, !!state.weeklyDone[h.id], 'toggleWeekly', 'weekly');
+    });
+    html += '</div>';
+  });
+  return html;
+}
+
+// ── MILESTONES ───────────────────────────────────────────────────────────────
+
+function renderMilestones() {
+  const done = MILESTONES.filter(m=>state.milestones[m.id]).length;
+  const pct  = Math.round(done/MILESTONES.length*100);
+
+  let html = `<div class="sec-heading">Your 12-Month Journey</div>
+  <div class="stats-row">
+    <div class="stat-box" style="background:#B77FD422"><div class="stat-num" id="ml-done" style="color:#B77FD4">${done}</div><div class="stat-lbl">Unlocked</div></div>
+    <div class="stat-box"><div class="stat-num" id="ml-remaining">${MILESTONES.length-done}</div><div class="stat-lbl">Remaining</div></div>
+    <div class="stat-box" style="background:#E8C54711"><div class="stat-num" id="ml-pct" style="color:#E8C547">${pct}%</div><div class="stat-lbl">Journey</div></div>
+  </div>`;
+
+  PHASES.forEach(ph => {
+    const pml  = MILESTONES.filter(m=>m.phase===ph.id);
+    const dPh  = pml.filter(m=>state.milestones[m.id]).length;
+    const pPct = Math.round(dPh/pml.length*100);
+    html += `<div class="card">
+      <div class="card-header">
+        <div class="card-icon" style="background:${ph.color}22;color:${ph.color}">${ph.emoji}</div>
+        <div style="flex:1">
+          <div class="card-title">${ph.label}</div>
+          <div style="font-size:10px;color:#666;margin-top:1px">${ph.months}</div>
+        </div>
+        <div class="card-badge" style="background:${ph.color}">${dPh}/${pml.length}</div>
+      </div>
+      ${miniBarHTML(pPct, ph.color)}
+      <div style="margin-bottom:10px"></div>`;
+    pml.forEach(m => { html += milestoneBtnHTML(m, !!state.milestones[m.id], ph.color); });
+    html += '</div>';
+  });
+  return html;
+}
+
+// ── PROGRESS ─────────────────────────────────────────────────────────────────
+
+function renderProgress() {
+  const dailyDone  = DAILY_HABITS.filter(h=>state.dailyDone[h.id]).length;
+  const dailyPct   = Math.round(dailyDone/DAILY_HABITS.length*100);
+  const mlDone     = MILESTONES.filter(m=>state.milestones[m.id]).length;
+
+  let html = `<div class="sec-heading">Progress Dashboard</div>
+  <div class="big-stat-grid">
+    <div class="big-stat"><div class="big-stat-emoji">🔥</div><div class="big-stat-num">${state.streak}</div><div class="big-stat-lbl">Day Streak</div></div>
+    <div class="big-stat"><div class="big-stat-emoji">✅</div><div class="big-stat-num">${dailyPct}%</div><div class="big-stat-lbl">Today</div></div>
+    <div class="big-stat"><div class="big-stat-emoji">🏆</div><div class="big-stat-num">${mlDone}</div><div class="big-stat-lbl">Milestones</div></div>
+  </div>`;
+
+  // Section breakdown
+  html += `<div class="card"><div class="card-header">
+    <div class="card-icon" style="background:#7B9CDE22;color:#7B9CDE">📊</div>
+    <div class="card-title">Today by Section</div></div>`;
+  SECTIONS.forEach(s => {
+    const sh   = DAILY_HABITS.filter(h=>h.section===s.id);
+    const done = sh.filter(h=>state.dailyDone[h.id]).length;
+    const pct  = sh.length ? Math.round(done/sh.length*100) : 0;
+    html += `<div style="margin-bottom:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:13px;color:#ccc">${s.icon} ${s.label}</span>
+        <span style="font-size:13px;font-weight:700;color:${s.color}">${done}/${sh.length}</span>
+      </div>${miniBarHTML(pct, s.color)}</div>`;
+  });
+  html += '</div>';
+
+  html += `<div class="motiv-card">
+    <div class="motiv-emoji">🌱</div>
+    <div class="motiv-title">Keep Going</div>
+    <div class="motiv-text">Every checkbox you tick is a promise kept — to your wife, your child, and yourself. Small wins compound into the man you're becoming.</div>
+  </div>`;
+
+  // 12-month journey
+  html += `<div class="card"><div class="card-header">
+    <div class="card-icon" style="background:#B77FD422;color:#B77FD4">🗺</div>
+    <div class="card-title">12-Month Journey</div></div>`;
+  PHASES.forEach(ph => {
+    const pml  = MILESTONES.filter(m=>m.phase===ph.id);
+    const dPh  = pml.filter(m=>state.milestones[m.id]).length;
+    const pPct = Math.round(dPh/pml.length*100);
+    html += `<div style="margin-bottom:13px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="font-size:13px;color:#ccc">${ph.emoji} ${ph.label} <span style="font-size:10px;color:#555">(${ph.months})</span></span>
+        <span style="font-size:13px;font-weight:700;color:${ph.color}">${pPct}%</span>
+      </div>${miniBarHTML(pPct, ph.color)}</div>`;
+  });
+  html += '</div>';
+  return html;
+}
+
+// ── SETTINGS ─────────────────────────────────────────────────────────────────
+
+function renderSettings() {
+  const perm = ('Notification' in window) ? Notification.permission : 'not-supported';
+  const granted = perm === 'granted';
+
+  let html = `<div class="sec-heading">Reminder Settings</div>`;
+
+  if (!granted) {
+    html += `<div class="card" style="background:#131a14;border-color:#4FC3A133">
+      <div style="font-size:28px;margin-bottom:10px">🔔</div>
+      <div style="color:#4FC3A1;font-weight:700;font-size:15px;margin-bottom:8px">Enable Notifications</div>
+      <div style="color:#888;font-size:12px;line-height:1.6;margin-bottom:14px">
+        Allow notifications so this app can remind you every hour about pending habits. 
+        You can tick them done directly from the notification.
+      </div>
+      <button class="notif-card-btn" onclick="requestNotifPermission()">
+        🔔 Allow Notifications
+      </button>
+    </div>`;
+  }
+
+  html += `<div id="reminder-card" class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#4FC3A122;color:#4FC3A1">⏰</div>
+      <div class="card-title">Hourly Reminders</div>
+    </div>
+
+    <div class="toggle-row">
+      <span class="toggle-lbl">Remind me of pending habits</span>
+      <label class="toggle">
+        <input type="checkbox" id="remind-toggle" ${state.remindersEnabled?'checked':''} 
+          onchange="toggleReminders(this.checked)" ${!granted?'disabled':''}>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    ${!granted ? '<div style="font-size:11px;color:#666;margin-top:4px">Enable notifications above first</div>' : ''}
+
+    <div style="margin-top:12px">
+      <div style="font-size:12px;color:#888;margin-bottom:6px">Reminder frequency</div>
+      <select class="interval-select" id="interval-sel" onchange="setInterval(this.value)" ${!granted?'disabled':''}>
+        <option value="30" ${state.reminderInterval===30?'selected':''}>Every 30 minutes</option>
+        <option value="60" ${state.reminderInterval===60?'selected':''}>Every hour</option>
+        <option value="90" ${state.reminderInterval===90?'selected':''}>Every 90 minutes</option>
+        <option value="120" ${state.reminderInterval===120?'selected':''}>Every 2 hours</option>
+      </select>
+    </div>
+
+    ${granted && state.remindersEnabled ? `
+    <div style="margin-top:14px">
+      <button onclick="testReminder()" style="
+        background:#1a1a1a;border:1px solid #2a2a2a;color:#aaa;
+        border-radius:10px;padding:9px 16px;font-size:12px;cursor:pointer;
+        font-family:'DM Sans',sans-serif;width:100%">
+        🧪 Send Test Reminder Now
+      </button>
+    </div>` : ''}
+  </div>`;
+
+  html += `<div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#7B9CDE22;color:#7B9CDE">📱</div>
+      <div class="card-title">Install as App</div>
+    </div>
+    <div style="font-size:12px;color:#888;line-height:1.6;margin-bottom:12px">
+      Add to your home screen for the full app experience — works offline and looks exactly like a native app.
+    </div>
+    <div style="font-size:12px;color:#666;line-height:1.7">
+      <b style="color:#aaa">Android Chrome:</b> Tap ⋮ menu → "Add to Home screen"<br>
+      <b style="color:#aaa">iOS Safari:</b> Tap Share □↑ → "Add to Home Screen"
+    </div>
+    ${window._deferredInstall ? `
+    <button onclick="doInstall()" style="
+      background:#4FC3A1;color:#0b0b0b;border:none;border-radius:10px;
+      padding:11px;font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:12px;
+      font-family:'DM Sans',sans-serif">
+      📲 Install Now
+    </button>` : ''}
+  </div>`;
+
+  html += `<div class="card">
+    <div class="card-header">
+      <div class="card-icon" style="background:#E87D5A22;color:#E87D5A">🔄</div>
+      <div class="card-title">Reset</div>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:12px">Reset today's habits (does not affect streak or milestones)</div>
+    <button onclick="resetToday()" style="
+      background:#1a0d0d;border:1px solid #E87D5A33;color:#E87D5A;
+      border-radius:10px;padding:9px 16px;font-size:12px;cursor:pointer;
+      font-family:'DM Sans',sans-serif;width:100%">
+      Reset Today's Habits
+    </button>
+  </div>`;
+
+  return html;
+}
+
+function toggleReminders(checked) {
+  state.remindersEnabled = checked;
+  saveState();
+  if (checked) {
+    startReminders();
+    showBanner('⏰ Reminders started!', 'success');
+  } else {
+    stopReminders();
+    showBanner('Reminders paused', 'info');
+  }
+}
+
+function setInterval(val) {
+  state.reminderInterval = parseInt(val);
+  saveState();
+  if (state.remindersEnabled) {
+    stopReminders(); startReminders();
+    showBanner(`⏰ Reminders set to every ${val} min`, 'success');
+  }
+}
+
+function testReminder() {
+  const pending = getPendingHabits();
+  if (pending.length === 0) {
+    showBanner('🎉 All habits done — nothing to remind!', 'fire'); return;
+  }
+  sendReminder(pending);
+  showBanner(`🧪 Test notification sent (${pending.length} pending)`, 'info');
+}
+
+function resetToday() {
+  if (!confirm('Reset all of today\'s habits?')) return;
+  state.dailyDone = {};
+  saveState();
+  updateHeader();
+  if (state.currentTab === 'today') renderMain();
+  showBanner('Today reset ✓', 'info');
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// UI UTILS
+// ═══════════════════════════════════════════════════════════════════════════════
+
+let bannerTimer = null;
+function showBanner(msg, type='success') {
+  const b = document.getElementById('notif-banner');
+  b.textContent = msg;
+  b.className = `show ${type}`;
+  if (bannerTimer) clearTimeout(bannerTimer);
+  bannerTimer = setTimeout(() => b.classList.remove('show'), 2800);
+}
+
+function setGreeting() {
+  const h = new Date().getHours();
+  const g = h<12 ? 'Good morning 👋' : h<17 ? 'Good afternoon 👋' : 'Good evening 👋';
+  document.getElementById('greeting').textContent = g;
+}
+
+function setQuote() {
+  const quotes = QUOTES;
+  const q = quotes[new Date().getDate() % quotes.length];
+  document.getElementById('quote-text').textContent = `"${q}"`;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// PWA INSTALL
+// ═══════════════════════════════════════════════════════════════════════════════
+
+window._deferredInstall = null;
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  window._deferredInstall = e;
+  document.getElementById('install-bar').classList.add('show');
+});
+
+function doInstall() {
+  if (!window._deferredInstall) return;
+  window._deferredInstall.prompt();
+  window._deferredInstall.userChoice.then(r => {
+    if (r.outcome === 'accepted') {
+      document.getElementById('install-bar').classList.remove('show');
+      showBanner('🎉 App installed!', 'fire');
+    }
+    window._deferredInstall = null;
+  });
+}
+
+window.addEventListener('appinstalled', () => {
+  document.getElementById('install-bar').classList.remove('show');
+  showBanner('🎉 App installed successfully!', 'fire');
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SERVICE WORKER REGISTRATION
+// ═══════════════════════════════════════════════════════════════════════════════
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => { console.log('SW registered:', reg.scope); })
+      .catch(err => { console.log('SW failed:', err); });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════════════════════
+
+loadState();
+setGreeting();
+setQuote();
+updateHeader();
+renderMain();
+
+// Check for markDone param from notification click
+const params = new URLSearchParams(location.search);
+if (params.get('markDone')) {
+  toggleDaily(params.get('markDone'));
+  history.replaceState({}, '', '/');
+}
+
+// Resume reminders if they were active
+if (state.remindersEnabled && ('Notification' in window) && Notification.permission==='granted') {
+  startReminders();
+}
+</script>
+</body>
+</html>
